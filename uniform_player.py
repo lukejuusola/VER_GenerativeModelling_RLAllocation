@@ -9,7 +9,7 @@ if __name__ == '__main__':
     state = env.reset()
     n_loaders = env.load.n
     total_cost = 0
-    turns = 1000
+    turns = 10000 
 
     # to graph
     costs = []
