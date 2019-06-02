@@ -17,7 +17,8 @@ if __name__ == '__main__':
     cum_avg_cost = []
     for i in range(1, turns):
         cur_nrg = state[0]
-        to_gen = n_loaders - cur_nrg
+        print(n_loaders, cur_nrg)
+        to_gen = 0 # n_loaders - cur_nrg
         state, reward, done, info = env.step(to_gen)
         total_cost -= reward
         nrgs.append(cur_nrg)
