@@ -61,6 +61,28 @@ class normal_network(network):
   def reset(self):
     return 
 
+
+class cyclic_network(network):
+  def __init__(self, n):
+    self.n = n
+    self.mean = 10
+    self.amp = 4.5
+    # resolution timesteps/cycle
+    res = 24
+    self.cur_t = 0
+    self.timestep = 2 * np.pi / res
+    
+  def generate(self):
+    noise = np.random.normal(size = self.n)
+    sample_mean = self.amp * np.sin(self.cur_t) + self.mean
+    self.cur_t += self.timestep
+    samples = sample_mean + noise
+    samples = np.maximum(samples, 0)
+    return np.sum(samples)
+
+  def reset(self):
+    self.cur_t = 0
+    
   
 class VerEnv(gym.Env):
   metadata = {'render.modes': ['human']}
@@ -71,7 +93,7 @@ class VerEnv(gym.Env):
     self.observation_space = spaces.Box(low = np.zeros(3), high = np.array([np.inf] * 3), dtype = np.float32)
     # These will be neural network generated
     self.ver = uniform_network(1)
-    self.load = uniform_network(1)
+    self.load = cyclic_network(1)
     self.storage = Storage(10)
     
     # Want to give the agent some historical information.

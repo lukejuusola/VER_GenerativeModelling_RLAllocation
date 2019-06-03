@@ -1,4 +1,5 @@
 gym-ver/gym_ver.egg-info
+DDPG/video/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
