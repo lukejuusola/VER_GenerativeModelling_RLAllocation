@@ -26,6 +26,7 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+.idea/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -104,3 +105,7 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# Generative models
+generative_models/data
+generative_models/runs
