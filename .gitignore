@@ -107,5 +107,5 @@ venv.bak/
 .mypy_cache/
 
 # Generative models
-generative_models/data
+generative_models/data/solar_data_2006
 generative_models/runs

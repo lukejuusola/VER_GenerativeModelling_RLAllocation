@@ -139,8 +139,32 @@ def load_solar_2006(filename, file_labels, sample_size=2,
     return X_train, X_test, y_train, y_test
 
 
-def load_gan(folder_path):
-    pass
+def load_load(filename, file_labels, testsize=0.2, verbose=True):
+    # Load training examples
+    with open(filename, 'r') as csvfile:
+        reader = csv.reader(csvfile)
+        rows = [row for row in reader]
+    X = np.array(rows, dtype=float)
+
+    # Load labels (corresponding to month)
+    with open(file_labels, 'r') as csvfile:
+        reader = csv.reader(csvfile)
+        rows = [row for row in reader]
+    Y = np.array(rows, dtype=int)
+
+    # Split data into training data (80%) and testing data (20%).
+    X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=testsize,
+                                                        random_state=10)
+
+    # Print information about dataset
+    if verbose:
+        print('Load data loaded')
+        print(f'Total number of samples: {X_train.shape[0] + X_test.shape[0]}')
+        print(f'Shape of training dataset: {X_train.shape}')
+        print(f'Shape of test datasaet: {X_test.shape}')
+
+    return X_train, X_test, y_train, y_test
+
 
 if __name__ == '__main__':
     pass
