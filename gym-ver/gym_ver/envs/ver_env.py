@@ -5,6 +5,30 @@ from gym.utils import seeding
 import Box2D
 import pdb
 
+class queue:
+  def __init__(self, maxsize):
+    self.maxsize = maxsize
+    self.q = []
+    self.size = 0
+    for i in range(maxsize):
+      self.enqueue(0.)
+    
+  def dequeue(self):
+    front = None
+    if self.size > 0:
+      front = self.q[0]
+      self.q = self.q[1:]
+      self.size -= 1
+    return front
+
+  def enqueue(self, to_add):
+    if self.size >= self.maxsize:
+      self.dequeue()
+    self.q += [to_add]
+    self.size += 1
+
+  def tolist(self):
+    return self.q
 
 class Storage:
   def __init__(self, cap):
@@ -63,10 +87,11 @@ class normal_network(network):
 
 
 class cyclic_network(network):
-  def __init__(self, n):
+  def __init__(self, n, mean = 10, amp = 5, shift = 0):
     self.n = n
-    self.mean = 10
-    self.amp = 4.5
+    self.mean = mean
+    self.amp = amp
+    self.shift = shift
     # resolution timesteps/cycle
     res = 24
     self.cur_t = 0
@@ -74,7 +99,7 @@ class cyclic_network(network):
     
   def generate(self):
     noise = np.random.normal(size = self.n)
-    sample_mean = self.amp * np.sin(self.cur_t) + self.mean
+    sample_mean = self.amp * np.sin(self.cur_t + self.shift) + self.mean
     self.cur_t += self.timestep
     samples = sample_mean + noise
     samples = np.maximum(samples, 0)
@@ -83,29 +108,40 @@ class cyclic_network(network):
   def reset(self):
     self.cur_t = 0
     
-  
+
+def data_network(network):
+  def __init__(self, n, file_list):
+    self.n = n
+    # n = 1 first
+    assert n == 1
+    self.cur_file = [] # Current file that we are pulling data from
+
+    
 class VerEnv(gym.Env):
   metadata = {'render.modes': ['human']}
 
   def __init__(self):
     high = 100
     self.action_space = spaces.Box(low = np.array([0.]), high = np.array([high]), dtype = np.float32)
-    self.observation_space = spaces.Box(low = np.zeros(3), high = np.array([np.inf] * 3), dtype = np.float32)
+    self.memory_size = 3
+    self.state_size = 2 * self.memory_size + 1
+    self.observation_space = spaces.Box(low = np.zeros(self.state_size), high = np.array([np.inf] * self.state_size), dtype = np.float32)
     # These will be neural network generated
-    self.ver = uniform_network(1)
+    self.ver = cyclic_network(1, mean = 9, amp = 4, shift = .5)
     self.load = cyclic_network(1)
     self.storage = Storage(10)
     
     # Want to give the agent some historical information.
     # Could make it really fancy with RNNs and what not, but this should likely suffice
-    self.last_ver_production = None
-    self.last_load_production = None
+    self.hist_ver = queue(self.memory_size)
+    self.hist_load = queue(self.memory_size)
     self.cost_to_generate = 1
     self.cost_blackout = 1000
     self.action_cost = lambda x: self.cost_to_generate * x
 
   def get_state(self):
-    return np.array([self.storage.stored, self.last_ver_production, self.last_load_production])
+    state = [self.storage.stored] + self.hist_ver.tolist() + self.hist_load.tolist()
+    return np.array(state)
 
   def set_costs(self, generation, blackout):
     self.cost_to_generate = generation
@@ -119,11 +155,11 @@ class VerEnv(gym.Env):
     #pdb.set_trace()
     # get current load
     cur_load = self.load.generate()
-    self.last_load_production = cur_load
-    
+    self.hist_ver.enqueue(cur_load)
+  
     # get current ver generation
     cur_ver = self.ver.generate()
-    self.last_ver_production = cur_ver
+    self.hist_ver.enqueue(cur_ver)
     
     # Generate total cost
     # cost is price per created unit. Large drawback if load greater than
@@ -131,28 +167,31 @@ class VerEnv(gym.Env):
     cost = self.action_cost(action)
 
     # update state
+    blackout_flag = 0
+    cur_demand = cur_load - cur_ver
     # fully covered by ver, we store extra ver and action 
     if cur_ver > cur_load:
-      extra_nrg = cur_ver - cur_load + action
+      extra_nrg = action - cur_demand
       self.storage.store(extra_nrg)
     # not fully covered
     else:
-      remaining_load = cur_load - cur_ver
       # remainder is covered by action, store what's left
-      if action > remaining_load:
-        extra_nrg = action - remaining_load
+      if action > cur_demand:
+        extra_nrg = action - cur_demand
         self.storage.store(extra_nrg)
       # need to dip into storage
       else:
-        needed_from_storage = remaining_load - action
+        needed_from_storage = cur_demand - action
         taken = self.storage.take(needed_from_storage)
         # stoarge did not meet requirements
         if taken < needed_from_storage:
           # Blackout!
-          cost += self.cost_blackout
+          blackout_flag = 1
         
-    assert cost >= 0, cost
-    reward = -cost
+    #assert cost >= 0, cost
+    reward = - blackout_flag * self.cost_blackout - action + cur_demand
+    # Maximize cur_demand - action without blacking out
+    # I.e., try to match action exactly. Further penalize wasting energy over capacity?  
     # return obs, reward, done, info
     return self.get_state(), reward, False, None
     
