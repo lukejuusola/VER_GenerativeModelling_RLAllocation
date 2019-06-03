@@ -109,3 +109,4 @@ venv.bak/
 # Generative models
 generative_models/data/solar_data_2006
 generative_models/runs
+gan_with_labels_load.ipynb
