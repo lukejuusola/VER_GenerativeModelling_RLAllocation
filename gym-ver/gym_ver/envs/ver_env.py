@@ -2,7 +2,7 @@ import gym
 import numpy as np
 from gym import error, spaces, utils
 from gym.utils import seeding
-import Box2D
+#import Box2D
 import pdb
 import csv
 
