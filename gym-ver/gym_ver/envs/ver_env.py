@@ -180,14 +180,14 @@ class load_network(network):
       raise ValueError('Load data has not been generated yet.')
 
     elif self.data_type == 'real':
-      self.file_path = 'generative_models/data/load_2017_2days.csv'
+      self.file_path = 'generative_models/data/load_2017_2days_hourly.csv'
 
       # Load training examples
       with open(self.file_path, 'r') as csvfile:
         reader = csv.reader(csvfile)
         rows = [row for row in reader]
       rows = np.array(rows, dtype=float)
-      self.X = np.reshape(rows, (-1, 576))
+      self.X = np.reshape(rows, (-1, 48))
 
     else:
       raise ValueError('Type of data to load not understood.')
